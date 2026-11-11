@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Settings &amp; Rules{% endblock %}
+{% block page_title %}Detection Engine Settings &amp; Thresholds Tuning{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+  <!-- Settings Form -->
+  <div class="panel-card">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg class="soc-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Heuristic Correlation Thresholds
+        </span>
+      </div>
+    </div>
+
+    <!-- Production Disclaimer Note -->
+    <div style="background: var(--bg-surface-elevated); border-left: 4px solid var(--status-medium); padding: 0.85rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45;">
+      <strong style="color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+        <svg class="soc-icon" style="color: var(--status-medium);" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        SOC Engineering Note:
+      </strong>
+      The detection thresholds below are demonstration defaults calibrated for rapid testing. In an enterprise AWS production SOC, thresholds must be tuned against baseline traffic velocity and monitored via false-positive telemetry.
+    </div>
+
+    <form id="settings-form" onsubmit="saveSettings(event)" style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <!-- Failed Attempt Threshold -->
+      <div>
+        <label style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 0.35rem;">
+          Brute Force Threshold (Failed Logins)
+        </label>
+        <input
+          type="number"
+          id="failed_attempt_threshold"
+          class="input-control"
+          style="width: 100%;"
+          min="2"
+          max="50"
+          value="{{ settings.get('failed_attempt_threshold', '4') }}"
+          required
+        >
+        <span style="font-size: 0.78rem; color: var(--text-muted);">
+          Number of failed login attempts by the same entity within the correlation window before triggering RULE-001.
+        </span>
+      </div>
+
+      <!-- Time Window Minutes -->
+      <div>
+        <label style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 0.35rem;">
+          Correlation Time Window (Minutes)
+        </label>
+        <input
+          type="number"
+          id="time_window_minutes"
+          class="input-control"
+          style="width: 100%;"
+          min="1"
+          max="120"
+          value="{{ settings.get('time_window_minutes', '15') }}"
+          required
+        >
+        <span style="font-size: 0.78rem; color: var(--text-muted);">
+          Sliding time window for aggregating authentication attempts.
+        </span>
+      </div>
+
+      <!-- Spray User Count -->
+      <div>
+        <label style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 0.35rem;">
+          Password Spray Account Threshold
+        </label>
+        <input
+          type="number"
+          id="spray_user_count"
+          class="input-control"
+          style="width: 100%;"
+          min="2"
+          max="20"
+          value="{{ settings.get('spray_user_count', '3') }}"
+          required
+        >
+        <span style="font-size: 0.78rem; color: var(--text-muted);">
+          Minimum distinct usernames targeted from a single IP address to flag RULE-002 (Horizontal Spray).
+        </span>
+      </div>
+
+      <!-- Velocity Spike Threshold -->
+      <div>
+        <label style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 0.35rem;">
+          Authentication Velocity Spike (Requests / 5 Mins)
+        </label>
+        <input
+          type="number"
+          id="velocity_threshold"
+          class="input-control"
+          style="width: 100%;"
+          min="5"
+          max="100"
+          value="{{ settings.get('velocity_threshold', '10') }}"
+          required
+        >
+        <span style="font-size: 0.78rem; color: var(--text-muted);">
+          Total authentication requests within a 5-minute window that trigger RULE-004 (DoS / Bot Stuffing).
+        </span>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-primary">
+          <svg class="soc-icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save &amp; Apply Thresholds
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Cloud & Environment Info -->
+  <div>
+    <div class="panel-card" style="margin-bottom: 1.5rem;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg class="soc-icon" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+            AWS Environment Mode
+          </span>
+        </div>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; display: flex; flex-direction: column; gap: 0.75rem;">
+        <div>
+          <strong>Status:</strong>
+          <span style="color: var(--accent-blue);">{{ aws_status.message }}</span>
+        </div>
+        <div>
+          <strong>AWS Region:</strong> <code>{{ aws_status.region }}</code>
+        </div>
+        <div>
+          <strong>Boto3 SDK:</strong>
+          <span>{{ 'Installed' if aws_status.boto3_installed else 'Not Installed' }}</span>
+        </div>
+        <div>
+          <strong>CloudWatch Namespace:</strong> <code>{{ aws_status.cloudwatch_namespace }}</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Detection Rules Reference -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg class="soc-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Active Rule Profiles
+          </span>
+        </div>
+      </div>
+      <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.5rem;">
+        <div><strong>RULE-001:</strong> Brute Force Authentication</div>
+        <div><strong>RULE-002:</strong> Password Spraying (Horizontal)</div>
+        <div><strong>RULE-003:</strong> Account Breach Post-Failures</div>
+        <div><strong>RULE-004:</strong> Authentication Velocity Spike</div>
+        <div><strong>RULE-005:</strong> Corrupt Log Record / Tampering</div>
+        <div><strong>RULE-006:</strong> Impossible Travel Anomaly</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function saveSettings(e) {
+  e.preventDefault();
+  const payload = {
+    failed_attempt_threshold: document.getElementById("failed_attempt_threshold").value,
+    time_window_minutes: document.getElementById("time_window_minutes").value,
+    spray_user_count: document.getElementById("spray_user_count").value,
+    velocity_threshold: document.getElementById("velocity_threshold").value,
+  };
+
+  try {
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Detection thresholds successfully updated!", "success");
+    } else {
+      showToast("Failed to save settings", "error");
+    }
+  } catch (err) {
+    showToast("Network error saving settings", "error");
+  }
+}
+</script>
+{% endblock %}

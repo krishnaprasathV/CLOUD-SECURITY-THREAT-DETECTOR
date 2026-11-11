@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Log Ingestion &amp; ETL{% endblock %}
+{% block page_title %}Security Log Ingestion &amp; ETL Pipeline (CPPE Module 2){% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+  <!-- Ingestion Zone & Controls -->
+  <div>
+    <!-- Drag & Drop Upload Zone -->
+    <div class="panel-card" style="margin-bottom: 1.5rem;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg class="soc-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Ingest Cloud Authentication Logs (CSV)
+          </span>
+        </div>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Max file size: 16 MB</span>
+      </div>
+
+      <div class="dropzone" id="drop-area" onclick="document.getElementById('file-input').click()">
+        <div class="dropzone-icon">
+          <svg class="soc-icon soc-icon-xl" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3 style="font-size: 1.1rem; margin-bottom: 0.35rem;">Drag and drop security logs CSV here</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Supports AWS CloudTrail, Linux Auth, VPC Auth, and Okta CSV streams
+        </p>
+        <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); document.getElementById('file-input').click()">
+          Browse Files
+        </button>
+        <input type="file" id="file-input" accept=".csv" style="display: none;" onchange="handleFileSelected(this.files[0])">
+      </div>
+
+      <!-- Upload Status Progress Banner -->
+      <div id="upload-status" style="margin-top: 1rem; display: none;"></div>
+    </div>
+
+    <!-- Rapid Demonstration Shortcuts -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg class="soc-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Demonstration Controls
+          </span>
+        </div>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem;">
+        Load pre-packaged synthetic datasets containing multi-vector security attacks (Brute Force, Password Spraying, Compromised Accounts, and Velocity Spikes) to immediately test detection logic.
+      </p>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="loadSampleDataset()">
+          <svg class="soc-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Load Synthetic Dataset
+        </button>
+        <a href="/api/export?type=events" class="btn btn-secondary" download>
+          <svg class="soc-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Sanitized Logs (CSV)
+        </a>
+        <button class="btn btn-danger" onclick="resetDatabaseConfirm()">
+          <svg class="soc-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Reset Database
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ETL Pipeline Architecture & Live Metrics -->
+  <div>
+    <div class="panel-card" style="margin-bottom: 1.5rem;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg class="soc-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            ETL Pipeline Telemetry
+          </span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.88rem;">
+        <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-subtle);">
+          <span style="color: var(--text-muted);">Total Logs Ingested:</span>
+          <strong>{{ stats.total_events }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-subtle);">
+          <span style="color: var(--text-muted);">Successful Logins:</span>
+          <strong style="color: var(--status-low);">{{ stats.successful_logins }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-subtle);">
+          <span style="color: var(--text-muted);">Failed Logins:</span>
+          <strong style="color: var(--status-critical);">{{ stats.failed_logins }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-subtle);">
+          <span style="color: var(--text-muted);">Correlated Threats:</span>
+          <strong style="color: var(--status-high);">{{ stats.total_incidents }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Amazon S3 Target:</span>
+          <span style="font-family: monospace; font-size: 0.8rem; color: var(--accent-blue);">s3://wipro-logs/</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Required Schema Format Reference -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg class="soc-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Expected CSV Schema
+          </span>
+        </div>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        The ingestion pipeline automatically validates and cleans the following columns:
+      </p>
+      <ul style="font-size: 0.82rem; color: var(--text-secondary); padding-left: 1.25rem; line-height: 1.5;">
+        <li><code>timestamp</code> (ISO-8601, Epoch, or standard format)</li>
+        <li><code>username</code> (User or service identity)</li>
+        <li><code>source_ip</code> (IPv4 address format validated)</li>
+        <li><code>event_type</code> (e.g. AUTHENTICATION)</li>
+        <li><code>status</code> (SUCCESS or FAILED)</li>
+        <li><code>country</code> &bull; <code>city</code> &bull; <code>user_agent</code> (Optional)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropArea = document.getElementById("drop-area");
+
+["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
+  dropArea.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+["dragenter", "dragover"].forEach(eventName => {
+  dropArea.addEventListener(eventName, () => dropArea.classList.add("dragover"), false);
+});
+
+["dragleave", "drop"].forEach(eventName => {
+  dropArea.addEventListener(eventName, () => dropArea.classList.remove("dragover"), false);
+});
+
+dropArea.addEventListener("drop", (e) => {
+  const dt = e.dataTransfer;
+  const files = dt.files;
+  if (files.length > 0) {
+    handleFileSelected(files[0]);
+  }
+});
+
+async function handleFileSelected(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    showToast("Invalid file type. Please upload a .csv file.", "error");
+    return;
+  }
+
+  const statusEl = document.getElementById("upload-status");
+  statusEl.style.display = "block";
+  statusEl.innerHTML = `
+    <div style="background: var(--bg-surface-elevated); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--accent-blue); display: flex; align-items: center; gap: 0.75rem;">
+      <div class="status-dot"></div>
+      <div>
+        <div style="font-weight: 600;">Processing ${file.name}...</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">Running ETL validation, timestamp normalization, and correlation engine...</div>
+      </div>
+    </div>
+  `;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      statusEl.innerHTML = `
+          <div style="font-weight: 700; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem;">
+            <svg class="soc-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            ETL Pipeline &amp; Ingestion Complete
+          </div>
+          <div style="font-size: 0.85rem;">
+            Extracted: <strong>${data.etl_metrics.total_extracted}</strong> | 
+            Valid Ingested: <strong>${data.events_inserted}</strong> | 
+            Malformed: <strong>${data.etl_metrics.malformed_count}</strong> | 
+            Threats Detected: <strong>${data.threats_detected}</strong>
+          </div>
+          <div style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--text-muted);">
+            Cloud Storage: ${data.s3_storage.s3_uri} (${data.s3_storage.mode})
+          </div>
+        </div>
+      `;
+      showToast(`Successfully processed ${file.name}!`, "success");
+    } else {
+      statusEl.innerHTML = `
+        <div style="background: var(--status-critical-bg); color: var(--status-critical); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--status-critical);">
+          <strong>Upload Error:</strong> ${data.error || "Failed to parse CSV"}
+        </div>
+      `;
+      showToast(data.error || "Upload failed", "error");
+    }
+  } catch (err) {
+    statusEl.innerHTML = `<div style="color: var(--status-critical);">Upload request failed due to network error.</div>`;
+    showToast("Network error uploading file", "error");
+  }
+}
+
+async function loadSampleDataset() {
+  try {
+    const res = await fetch("/api/seed", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, "success");
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      showToast(data.error || "Failed to load sample dataset", "error");
+    }
+  } catch (err) {
+    showToast("Network error seeding dataset", "error");
+  }
+}
+
+async function resetDatabaseConfirm() {
+  if (!confirm("Are you sure you want to clear all security events and incidents from the local database?")) {
+    return;
+  }
+  try {
+    const res = await fetch("/api/reset", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, "success");
+      setTimeout(() => window.location.reload(), 1000);
+    }
+  } catch (err) {
+    showToast("Network error resetting database", "error");
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Incidents Queue{% endblock %}
+{% block page_title %}Security Incident Response Queue{% endblock %}
+
+{% block content %}
+<div class="panel-card">
+  <!-- Search, Filter & Action Toolbar -->
+  <div class="filter-toolbar">
+    <div class="filter-group">
+      <!-- Search Input -->
+      <input
+        type="text"
+        id="search-input"
+        class="input-control"
+        placeholder="Filter by entity, IP, rule ID..."
+        style="min-width: 260px;"
+      >
+
+      <!-- Status Filter -->
+      <select id="status-filter" class="input-control">
+        <option value="all">Status: All</option>
+        <option value="New">Status: New</option>
+        <option value="Investigating">Status: Investigating</option>
+        <option value="Resolved">Status: Resolved</option>
+      </select>
+
+      <!-- Severity Filter -->
+      <select id="severity-filter" class="input-control">
+        <option value="all">Severity: All</option>
+        <option value="CRITICAL">Critical (Score &ge; 85)</option>
+        <option value="HIGH">High (Score 65 - 84)</option>
+        <option value="MEDIUM">Medium (Score 40 - 64)</option>
+        <option value="LOW">Low (Score &lt; 40)</option>
+      </select>
+
+      <!-- Sort Selection -->
+      <select id="sort-select" class="input-control">
+        <option value="risk_score">Sort by: Risk Score (Highest)</option>
+        <option value="attempt_count">Sort by: Attempt Count</option>
+        <option value="created_at">Sort by: Created Time</option>
+      </select>
+    </div>
+
+    <!-- Export Action -->
+    <div>
+      <a href="/api/export?type=incidents" class="btn btn-secondary btn-sm" download>
+        <svg class="soc-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Incidents (CSV)
+      </a>
+    </div>
+  </div>
+
+  <!-- Incident Response Queue Table -->
+  <div class="table-responsive">
+    <table class="soc-table">
+      <thead>
+        <tr>
+          <th>Incident ID</th>
+          <th>Threat Description &amp; Rule</th>
+          <th>Risk Score</th>
+          <th>Target Entity</th>
+          <th>Source IP</th>
+          <th>Status</th>
+          <th>Investigation</th>
+        </tr>
+      </thead>
+      <tbody id="incidents-table-body">
+        <!-- Rendered dynamically by incidents.js -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div id="pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle);">
+    <!-- Dynamically rendered -->
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/incidents.js') }}"></script>
+{% endblock %}

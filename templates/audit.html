@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Trail{% endblock %}
+{% block page_title %}Security Activity &amp; Audit Trail (CPPE Module 4){% endblock %}
+
+{% block content %}
+<div class="panel-card">
+  <div class="panel-header">
+    <div class="panel-title">
+      <span style="display: flex; align-items: center; gap: 0.5rem;">
+        <svg class="soc-icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        SOC Operator &amp; System Audit Trail
+      </span>
+    </div>
+    <span style="font-size: 0.8rem; color: var(--text-muted);">Tamper-evident system activity log</span>
+  </div>
+
+  <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+    Immutable record of all analyst actions, log uploads, rule executions, threshold modifications, and incident state transitions.
+  </p>
+
+  <div class="table-responsive">
+    <table class="soc-table">
+      <thead>
+        <tr>
+          <th>Log ID</th>
+          <th>UTC Timestamp</th>
+          <th>Actor</th>
+          <th>Security Action</th>
+          <th>Event Details</th>
+          <th>Origin IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if logs %}
+          {% for l in logs %}
+          <tr>
+            <td style="font-family: monospace; color: var(--text-muted);">#{{ l.id }}</td>
+            <td style="font-family: monospace;">{{ l.timestamp[:19] }}Z</td>
+            <td>
+              <span class="badge" style="background: var(--bg-hover); color: var(--text-primary); display: inline-flex; align-items: center;">
+                <svg class="soc-icon soc-icon-sm" style="margin-right: 4px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                {{ l.actor }}
+              </span>
+            </td>
+            <td>
+              <span style="font-family: monospace; font-weight: 600; color: var(--accent-blue);">
+                {{ l.action }}
+              </span>
+            </td>
+            <td style="font-size: 0.84rem; color: var(--text-secondary);">
+              {{ l.details }}
+            </td>
+            <td style="font-family: monospace; font-size: 0.82rem; color: var(--text-muted);">
+              {{ l.ip_address }}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              No security audit logs recorded yet.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

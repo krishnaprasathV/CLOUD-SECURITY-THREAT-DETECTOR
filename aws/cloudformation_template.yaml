@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Wipro CPPE - Cloud Security Threat Detector Infrastructure (S3, Lambda, CloudWatch, IAM)'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'production'
+    Description: 'Deployment environment name'
+  FailedAttemptThreshold:
+    Type: Number
+    Default: 4
+    Description: 'Number of failed authentication attempts required to trigger threat alarm'
+
+Resources:
+  # 1. Amazon S3 Bucket for Security Logs Ingestion
+  SecurityLogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'wipro-threat-detector-logs-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt ThreatDetectorFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .csv
+
+  # 2. IAM Role for Lambda with Least-Privilege Permissions
+  ThreatDetectorLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'ThreatDetectorExecutionRole-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: S3AndCloudWatchLeastPrivilege
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:aws:s3:::wipro-threat-detector-logs-${AWS::AccountId}-${AWS::Region}'
+                  - !Sub 'arn:aws:s3:::wipro-threat-detector-logs-${AWS::AccountId}-${AWS::Region}/*'
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                Resource: '*'
+
+  # 3. AWS Lambda Function for Serverless Threat Correlation
+  ThreatDetectorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'Wipro-ThreatDetector-${EnvironmentName}'
+      Runtime: python3.11
+      Handler: lambda_threat_detector.lambda_handler
+      Role: !GetAtt ThreatDetectorLambdaRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          CLOUDWATCH_NAMESPACE: 'Wipro/CloudSecurityThreatDetector'
+          FAILED_ATTEMPT_THRESHOLD: !Ref FailedAttemptThreshold
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              print("Cloud Security Threat Detector serverless function active.")
+              return {"statusCode": 200, "body": "Threat correlation processed."}
+
+  # 4. S3 Invocation Permission for Lambda
+  LambdaS3InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ThreatDetectorFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub 'arn:aws:s3:::wipro-threat-detector-logs-${AWS::AccountId}-${AWS::Region}'
+
+  # 5. Amazon CloudWatch Alarm for Active Security Threats
+  SecurityThreatsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'Wipro-HighThreatCountAlert-${EnvironmentName}'
+      AlarmDescription: 'Triggers when correlated threats exceed zero in a 5-minute evaluation period.'
+      MetricName: 'ServerlessThreatsDetected'
+      Namespace: 'Wipro/CloudSecurityThreatDetector'
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
+Outputs:
+  SecurityLogsBucketName:
+    Description: 'S3 Ingestion Bucket'
+    Value: !Ref SecurityLogsBucket
+  LambdaFunctionArn:
+    Description: 'Threat Detector Lambda Function ARN'
+    Value: !GetAtt ThreatDetectorFunction.Arn
+  CloudWatchAlarmName:
+    Description: 'Active Threat Alert Alarm'
+    Value: !Ref SecurityThreatsAlarm

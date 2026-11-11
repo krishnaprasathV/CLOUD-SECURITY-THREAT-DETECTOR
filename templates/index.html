@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}SOC Overview{% endblock %}
+{% block page_title %}Security Operations Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- KPI Metrics Grid -->
+<section class="kpi-grid">
+  <!-- Total Events Ingested -->
+  <div class="kpi-card">
+    <div class="kpi-header">
+      <span class="kpi-title">Total Logs Ingested</span>
+      <span class="kpi-icon">
+        <svg class="soc-icon soc-icon-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ stats.total_events }}</div>
+    <div class="kpi-meta">Across all cloud authentication streams</div>
+  </div>
+
+  <!-- Successful Auth -->
+  <div class="kpi-card low">
+    <div class="kpi-header">
+      <span class="kpi-title">Successful Logins</span>
+      <span class="kpi-icon">
+        <svg class="soc-icon soc-icon-lg" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ stats.successful_logins }}</div>
+    <div class="kpi-meta">Legitimate user access sessions</div>
+  </div>
+
+  <!-- Failed Auth -->
+  <div class="kpi-card critical">
+    <div class="kpi-header">
+      <span class="kpi-title">Failed Attempts</span>
+      <span class="kpi-icon">
+        <svg class="soc-icon soc-icon-lg" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ stats.failed_logins }}</div>
+    <div class="kpi-meta">Potential authentication anomalies</div>
+  </div>
+
+  <!-- Critical & High Threats -->
+  <div class="kpi-card critical">
+    <div class="kpi-header">
+      <span class="kpi-title">High/Critical Alerts</span>
+      <span class="kpi-icon">
+        <svg class="soc-icon soc-icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ stats.critical_incidents + stats.high_incidents }}</div>
+    <div class="kpi-meta">{{ stats.total_incidents }} total security alerts flagged</div>
+  </div>
+
+  <!-- Average Risk Score -->
+  <div class="kpi-card medium">
+    <div class="kpi-header">
+      <span class="kpi-title">Average Risk Score</span>
+      <span class="kpi-icon">
+        <svg class="soc-icon soc-icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value">{{ stats.avg_risk_score }} <span style="font-size: 1rem; color: var(--text-muted);">/100</span></div>
+    <div class="kpi-meta">Explainable risk index</div>
+  </div>
+
+  <!-- Monitored Entities -->
+  <div class="kpi-card">
+    <div class="kpi-header">
+      <span class="kpi-title">Monitored Entities</span>
+      <span class="kpi-icon">
+        <svg class="soc-icon soc-icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </span>
+    </div>
+    <div class="kpi-value" style="font-size: 1.45rem;">
+      {{ stats.unique_users }} <span style="font-size: 0.85rem; color: var(--text-muted);">Users</span> &bull; {{ stats.unique_ips }} <span style="font-size: 0.85rem; color: var(--text-muted);">IPs</span>
+    </div>
+    <div class="kpi-meta">Distinct telemetry identities</div>
+  </div>
+</section>
+
+<!-- Visual Analytics Charts Grid -->
+<section class="charts-grid">
+  <!-- Events Over Time -->
+  <div class="panel-card">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg class="soc-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Authentication Events Over Time
+        </span>
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Hourly Time-Series</span>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="timelineChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Risk Score Distribution -->
+  <div class="panel-card">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg class="soc-icon" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+          Threat Severity Distribution
+        </span>
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">By Severity Tier</span>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="riskChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Two-Column Analytics: Top Targeted Users & Attacker IPs -->
+<section class="two-col-grid">
+  <!-- Top Targeted Users -->
+  <div class="panel-card">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg class="soc-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Top Targeted Accounts
+        </span>
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">By Failed Attempts</span>
+    </div>
+    {% if top_threats.top_users %}
+    <ul class="threat-list">
+      {% for u in top_threats.top_users %}
+      <li class="threat-item">
+        <div class="threat-info">
+          <svg class="soc-icon" style="color: var(--accent-blue);" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div>
+            <div class="threat-badge">{{ u.username }}</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">Targeted by {{ u.distinct_ips }} distinct IPs</div>
+          </div>
+        </div>
+        <div>
+          <span class="badge badge-critical">{{ u.failed_attempts }} Failed</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No failed authentication records yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- Top Suspicious IPs -->
+  <div class="panel-card">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg class="soc-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Top Suspicious Source IPs
+        </span>
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">By Attack Volume</span>
+    </div>
+    {% if top_threats.top_ips %}
+    <ul class="threat-list">
+      {% for ip in top_threats.top_ips %}
+      <li class="threat-item">
+        <div class="threat-info">
+          <svg class="soc-icon" style="color: var(--status-critical);" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <div>
+            <div class="threat-badge">{{ ip.source_ip }}</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">Origin: {{ ip.country }} &bull; {{ ip.targeted_users }} users targeted</div>
+          </div>
+        </div>
+        <div>
+          <span class="badge badge-critical">{{ ip.attempt_count }} Attempts</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No suspicious IP activity recorded.</div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Recent Security Incidents Table -->
+<section class="panel-card" style="margin-top: 1rem;">
+  <div class="panel-header">
+    <div class="panel-title">
+      <span style="display: flex; align-items: center; gap: 0.5rem;">
+        <svg class="soc-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Recent Correlated Security Incidents
+      </span>
+    </div>
+    <a href="{{ url_for('incidents_view') }}" class="btn btn-secondary btn-sm">
+      View All Incidents &rarr;
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="soc-table">
+      <thead>
+        <tr>
+          <th>Incident ID</th>
+          <th>Detection Rule &amp; Title</th>
+          <th>Risk Level</th>
+          <th>Target User</th>
+          <th>Source IP</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if recent_incidents %}
+          {% for inc in recent_incidents %}
+          <tr>
+            <td style="font-family: monospace; font-weight: 600;">{{ inc.incident_id }}</td>
+            <td>
+              <div style="font-weight: 600;">{{ inc.title }}</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">{{ inc.rule_id }} &bull; {{ inc.rule_name }}</div>
+            </td>
+            <td>
+              <span class="badge badge-{{ inc.severity|lower }}">{{ inc.severity }} ({{ inc.risk_score }})</span>
+            </td>
+            <td style="font-family: monospace;">{{ inc.username }}</td>
+            <td style="font-family: monospace;">{{ inc.source_ip }}</td>
+            <td>
+              <span class="badge badge-status-{{ inc.status|lower }}">{{ inc.status }}</span>
+            </td>
+            <td>
+              <button class="btn btn-secondary btn-sm" onclick="openIncidentModal('{{ inc.incident_id }}')">
+                Investigate &rarr;
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              No active security alerts. Click "Load Sample Dataset" above to test detection rules.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/incidents.js') }}"></script>
+<script>
+async function quickSeedSampleData() {
+  try {
+    const res = await fetch("/api/seed", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, "success");
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      showToast(data.error || "Failed to load sample dataset", "error");
+    }
+  } catch (err) {
+    showToast("Network error while seeding dataset", "error");
+  }
+}
+</script>
+{% endblock %}

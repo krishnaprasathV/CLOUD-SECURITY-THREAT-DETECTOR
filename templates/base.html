@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SOC Dashboard{% endblock %} - Cloud Security Threat Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <!-- Lightweight Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Left Collapsible Sidebar -->
+  <aside class="sidebar" id="soc-sidebar">
+    <div class="sidebar-header">
+      <a href="{{ url_for('dashboard_view') }}" class="brand">
+        <div class="brand-icon">
+          <svg class="soc-icon" style="stroke: #ffffff;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <span>ThreatDetector</span>
+      </a>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('dashboard_view') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg class="soc-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </span>
+        <span>SOC Overview</span>
+      </a>
+      <a href="{{ url_for('incidents_view') }}" class="nav-link {% if active_page == 'incidents' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg class="soc-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </span>
+        <span>Incidents Queue</span>
+      </a>
+      <a href="{{ url_for('upload_view') }}" class="nav-link {% if active_page == 'upload' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg class="soc-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </span>
+        <span>Log Ingestion &amp; ETL</span>
+      </a>
+      <a href="{{ url_for('audit_view') }}" class="nav-link {% if active_page == 'audit' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg class="soc-icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        </span>
+        <span>Audit Trail</span>
+      </a>
+      <a href="{{ url_for('settings_view') }}" class="nav-link {% if active_page == 'settings' %}active{% endif %}">
+        <span class="nav-icon">
+          <svg class="soc-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+        <span>Settings &amp; Rules</span>
+      </a>
+    </nav>
+
+  </aside>
+
+  <!-- Main Application Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Navigation Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Sidebar">
+          ☰
+        </button>
+        <h1 class="page-title">{% block page_title %}Security Operations Center{% endblock %}</h1>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Live SOC UTC Clock -->
+        <div class="soc-clock" id="soc-clock-time">2026-10-15 00:00:00 UTC</div>
+
+        <!-- Telemetry Status -->
+        <div class="system-status">
+          <span class="status-dot"></span>
+          <span>Engine Active</span>
+        </div>
+
+        <!-- Theme Toggle (Dark / Light) -->
+        <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+          <span id="theme-icon">🌙</span>
+          <span id="theme-label">Dark</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Content -->
+    <main class="content-container">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Global Modal for Incident Details & GenAI Reasoning -->
+  <div class="modal-overlay" id="incident-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title" style="font-size: 1.1rem; font-weight: 700;">Incident Investigation</h3>
+        <button class="sidebar-toggle-btn" onclick="closeIncidentModal()" style="font-size: 1.5rem;">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-details-body">
+        <!-- Populated via JavaScript -->
+      </div>
+      <div class="modal-footer">
+        <div id="modal-status-actions"></div>
+        <button class="btn btn-secondary btn-sm" onclick="closeIncidentModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core JavaScript Scripts -->
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
