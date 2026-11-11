@@ -28,7 +28,7 @@ def run_seed(reset: bool = True):
     with open(sample_csv_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    print("[+] Running CPPE Module 2 ETL Pipeline (Extract -> Transform -> Validate -> Clean)...")
+    print("[+] Running Security ETL Pipeline (Extract -> Transform -> Validate -> Clean)...")
     etl = LogETLPipeline()
     result = etl.process_csv_stream(content)
 
@@ -41,7 +41,7 @@ def run_seed(reset: bool = True):
     inserted = insert_events_batch(events)
     print(f"[+] Successfully inserted {inserted} records.")
 
-    print("[+] Running CPPE Module 1 & 4 Security Correlation Engine...")
+    print("[+] Running Security Correlation Engine...")
     detector = SecurityDetector()
     incidents = detector.analyze_events(events)
     print(f"[+] Detected {len(incidents)} actionable security incidents across correlation rules.")
